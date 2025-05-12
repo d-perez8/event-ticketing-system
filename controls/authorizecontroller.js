@@ -9,6 +9,8 @@ const createToken = (user) => {
 
 //registers user
 const registerUser = async (req, res) => {
+  console.log('In registerUser route');
+
   const { name, email, password, role } = req.body;
 
   try {
