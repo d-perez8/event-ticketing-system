@@ -25,22 +25,39 @@ const registerUser = async (req, res) => {
     //calls creatToken on user to store in body for future use, and print out user registration info
     const token = createToken(user);
     res.status(201).json({
-      message: 'User registered successfully',
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-      }
+        message: 'User registered successfully',
+        token,
+        user: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role
+        }
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
-  }
+    }
 };
 
 const loginUser = async (req, res) => {
-    res.send('Logged in successfully');
-}
+    const {email, password} = req.body;
+    try {
+        const user = await User.findOne({email});
+        if(!user) return res.status(400).json({message: 'Invalid email'});
+
+        const valid = await bcrypt.compare(password, user.password);
+        if(!valid) return res.status(400).json({message: 'Incorrecet Password'});
+
+        const token = jwt.sign(
+            {id: user._id, role: user.role},
+            process.env.JWT_SECRET,
+            {expiresIn: '1d'}
+        );
+
+        res.json({token});
+    } catch (err) {
+        res.status(500).json({message: err.message});
+    }
+};
 
 module.exports = {registerUser, loginUser};
