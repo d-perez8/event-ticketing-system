@@ -39,5 +39,8 @@ const registerUser = async (req, res) => {
   }
 };
 
+const loginUser = async (req, res) => {
+    res.send('Logged in successfully');
+}
 
-module.exports = {registerUser};
+module.exports = {registerUser, loginUser};
