@@ -6,7 +6,8 @@ const {
   getEventById,
   createEvent,
   updateEvent,
-  deleteEvent
+  deleteEvent,
+  getAdminDashboard
 } = require('../controls/eventcontroller.js');
 
 const authmidware = require('../middleware/authorizemidware');
@@ -26,5 +27,8 @@ router.put('/:id', authmidware, adminmidware, updateEvent);
 
 //route for admin to delete event by id
 router.delete('/:id', authmidware, adminmidware, deleteEvent);
+
+//route for admin to see bookings on dashboard
+router.get('/admin/dashboard', adminmidware, getAdminDashboard);
 
 module.exports = router;

@@ -20,6 +20,9 @@ const bookingSchema = new Schema({
     bookingDate: {
         type: Date,
         default: Date.now, //sets booking from this instance
+    },
+    qrCode: {
+        type: String
     }
 });
 

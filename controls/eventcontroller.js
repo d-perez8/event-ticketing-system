@@ -142,10 +142,43 @@ const deleteEvent = async (req, res) => {
   }
 };
 
+//to access admindashboard from events route
+const getAdminDashboard = async (req, res) =>{
+  try{
+    const events = await Event.find();
+
+    //frustratin gto do it in an order of operations, promise.all will do them all at once,
+    //wait for all to finsih, and then proceed with the output
+    const listBookers = await Promise.all(
+      events.map(async (event) => {
+        const bookings = await Booking.find({event: event._id}).populate('user', 'name email');
+
+        return {
+          eventId: event._id,
+          title: event.title,
+          date: event.date,
+          venue: event.venue,
+          users: bookings.map((booking) => ({
+            userId: booking.user._id,
+            name: booking.user.name,
+            email: booking.user.email,
+            quantity: booking.quantity
+          }))
+        };
+      })
+    );
+
+    res.status(200).json(listBookers);
+  } catch (err) {
+    res.status(500).json({message: 'Server Error', error: err.message});
+  }
+};
+
 module.exports = {
   getEvents,
   getEventById,
   createEvent,
   updateEvent,
-  deleteEvent
+  deleteEvent,
+  getAdminDashboard
 };

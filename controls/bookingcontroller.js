@@ -1,5 +1,16 @@
 const Booking = require('../models/bookingmodel.js');
 const Event = require('../models/eventmodels.js');
+const qrCode = require('qrcode');
+const nodemailer = require('nodemailer');
+const User = require('../models/user.js');
+
+const emailConfirm = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  }
+});
 
 //create booking
 const createBooking = async (req, res) => {
@@ -11,7 +22,7 @@ const createBooking = async (req, res) => {
     //find the event
         const event = await Event.findById(eventId);
         if (!event) {
-        return res.status(404).json({message: 'Event not found'});
+          return res.status(404).json({message: 'Event not found'});
     }
 
     //check if venue capacity is filled
@@ -27,6 +38,37 @@ const createBooking = async (req, res) => {
     });
 
     await booking.save();
+    
+    const qrData = `booking:${booking._id}`;
+    const qrImg = await qrCode.toDataURL(qrData);
+    booking.qrCode = qrImg;
+    await booking.save();
+
+    const user = await User.findById(userId);
+    const userEmail = user.email;
+
+    const sendConfirm = {
+      from: process.env.EMAIL_USER,
+      to: userEmail,
+      subject: 'Booking Confirmation',
+      html: `
+        <h2>Booking Confirmed for: ${event.title}</h2>
+        <p>Quantity: ${quantity}</p>
+        <p>Date: ${event.date.toDateString()}</p>
+        <p>Venue: ${event.venue}</p>
+        <p>Here is your QR code for entry:</p>
+        <img src ="${qrImg}" alt="QR Code"/>
+        `
+    };
+
+    emailConfirm.sendMail(sendConfirm, (error, info) => {
+      if (error) {
+        console.error('Error sending wmail:', error);
+      }
+      else{
+        console.log('Email sent: ' + info.response);
+      }
+    });
 
     //update venues bookedSeats
     event.bookedSeats += quantity;
@@ -40,6 +82,7 @@ const createBooking = async (req, res) => {
         event: booking.event,
         quantity: booking.quantity,
         bookingDate: booking.bookingDate,
+        qrCode: booking.qrCode
       },
       event: {
         id: event._id,
@@ -81,9 +124,35 @@ const getBookingById = async (req, res) => {
     }
 };
 
+const validateBooking = async (req, res) => {
+  try{
+    const qr = req.params.qr;
+
+    const booking = await Booking.findOne({qrCode: qr}).populate('user', 'name email').populate('event', 'title date venue');
+
+    if (!booking) {
+      return res.status(404).json({message: 'Invalid or expired'})
+    }
+
+    res.status(200).json({
+      message: 'Ticket is vaild',
+      booking: {
+        id: booking._id,
+        user: booking.user,
+        event: booking.event,
+        quantity: booking.quantity,
+        bookingDate: booking.bookiingDate,
+      }
+    });
+  } catch (error) {
+    res.status(500).json({message: error.message});
+  }
+};
 
 module.exports = { 
     createBooking,
     getUserBookings,
-    getBookingById
+    getBookingById,
+    validateBooking,
+    emailConfirm
  };
